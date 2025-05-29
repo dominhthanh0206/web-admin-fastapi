@@ -1,12 +1,15 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+import json
+from fastapi import APIRouter, Depends, Form, HTTPException, status, UploadFile, File
 from sqlalchemy.orm import Session
 from typing import List
 
-from blog.schemas.user import User as UserSchema, UserBase, UserCreate
+from blog.schemas.user import User as UserSchema, UserBase, UserCreate, FaceRecognitionResponse
 from blog.models.user import User
 from blog.services import user as user_service
 from blog.database.database import get_db
-from blog.services.auth import get_current_user
+from blog.services.auth import get_current_user, get_user_by_id
+from blog.services.user_service import UserService
+from blog.services.face_recognition_service import FaceRecognitionService
 
 router = APIRouter(prefix="/users", tags=["users"])
 
@@ -50,15 +53,34 @@ def read_user(
 
 
 @router.put("/{user_id}", response_model=UserSchema)
-def update_user(
+async def update_user(
     user_id: str,
-    user: UserBase,
+    username: str = Form(...),
+    email: str = Form(...),
+    full_name: str = Form(...),
+    file: UploadFile = File(None),
     db: Session = Depends(get_db),
     _: UserSchema = Depends(get_current_user),
 ):
-    db_user = user_service.update_user(db, user_id=user_id, user_data=user)
-    if db_user is None:
+    user_base = UserBase(
+        username=username,
+        email=email,
+        full_name=full_name
+    )
+
+    user_data = get_user_by_id(db, user_id)
+    if user_data is None:
         raise HTTPException(status_code=404, detail="User not found")
+
+    face_embedding = None
+    if file:
+        image_data = await file.read()
+        face_embedding = FaceRecognitionService.get_face_embedding(image_data)
+        if face_embedding is None:
+            raise HTTPException(status_code=400, detail="Không tìm thấy khuôn mặt trong ảnh")
+        face_embedding = FaceRecognitionService.encode_embedding(face_embedding)
+
+    db_user = user_service.update_user(db, user_id=user_id, user_data=user_base, face_embedding=face_embedding)
     return db_user
 
 
@@ -70,3 +92,27 @@ def delete_user(
     if not success:
         raise HTTPException(status_code=404, detail="User not found")
     return {"detail": "User deleted"}
+
+
+@router.post("/recognize-face/", response_model=FaceRecognitionResponse)
+async def recognize_face(
+    file: UploadFile = File(...),
+    db: Session = Depends(get_db)
+):
+    image_data = await file.read()
+    
+    face_embedding = FaceRecognitionService.get_face_embedding(image_data)
+    if face_embedding is None:
+        return FaceRecognitionResponse(message="Không tìm thấy khuôn mặt trong ảnh")
+    
+    users = UserService.get_all_users(db)
+    for user in users:
+        if user.face_embedding and FaceRecognitionService.compare_faces(user.face_embedding, face_embedding):
+            return FaceRecognitionResponse(
+                user_id=user.id,
+                username=user.username,
+                full_name=user.full_name,
+                message="Đã nhận diện thành công"
+            )
+    
+    return FaceRecognitionResponse(message="Không xác định")

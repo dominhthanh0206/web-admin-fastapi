@@ -24,12 +24,13 @@ def get_users(db: Session, skip: int = 0, limit: int = 10):
 def get_user(db: Session, user_id: str):
     return db.query(User).filter(User.id == user_id).first()
 
-def update_user(db: Session, user_id: str, user_data: UserBase):
+def update_user(db: Session, user_id: str, user_data: UserBase, face_embedding: bytes):
     db_user = get_user(db, user_id)
     if db_user:
         db_user.username = user_data.username
         db_user.email = user_data.email
         db_user.full_name = user_data.full_name
+        db_user.face_embedding = face_embedding
         db.commit()
         db.refresh(db_user)
     return db_user

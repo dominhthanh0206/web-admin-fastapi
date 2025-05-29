@@ -1,4 +1,5 @@
 from pydantic import BaseModel
+from typing import Optional
 
 class UserBase(BaseModel):
     username: str
@@ -22,5 +23,13 @@ class Token(BaseModel):
     token_type: str
 
 
+
 class TokenData(BaseModel):
-    id: str | None = None 
+    id: str | None = None
+
+
+class FaceRecognitionResponse(BaseModel):
+    user_id: Optional[str] = None
+    username: Optional[str] = None
+    full_name: Optional[str] = None
+    message: str 
