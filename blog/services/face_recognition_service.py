@@ -8,22 +8,18 @@ class FaceRecognitionService:
     @staticmethod
     def get_face_embedding(image_data: bytes) -> Optional[np.ndarray]:
         try:
-            # Decode image data using cv2
             image_array = cv2.imdecode(np.frombuffer(image_data, np.uint8), cv2.IMREAD_COLOR)
             if image_array is None:
                 print("Failed to decode image")
                 return None
                 
-            # Convert BGR to RGB (face_recognition uses RGB)
             image_array = cv2.cvtColor(image_array, cv2.COLOR_BGR2RGB)
             print(image_array)
-            # Detect faces
             face_locations = face_recognition.face_locations(image_array)
             if not face_locations:
                 print("No faces detected in the image")
                 return None
                 
-            # Get face encodings
             face_encodings = face_recognition.face_encodings(image_array, face_locations)
             if not face_encodings:
                 print("Failed to generate face encodings")

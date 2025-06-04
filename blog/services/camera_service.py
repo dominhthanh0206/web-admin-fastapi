@@ -38,29 +38,23 @@ class CameraService:
         try:
             ret, frame = self.cap.read()
             if not ret:
-                # Try to restart camera if frame read fails
                 self.stop_camera()
                 self.start_camera()
                 return None, None
                 
-            # Convert to RGB for face recognition
             rgb_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
             
-            # Detect faces
             face_locations = face_recognition.face_locations(rgb_frame)
             if not face_locations:
                 return frame, None
                 
-            # Get face encodings
             face_encodings = face_recognition.face_encodings(rgb_frame, face_locations)
             if not face_encodings:
                 return frame, None
                 
-            # Compare with database
             users = UserService.get_all_users(self.db)
             for user in users:
                 if user.face_embedding and FaceRecognitionService.compare_faces(user.face_embedding, face_encodings[0]):
-                    # Draw rectangle and name
                     top, right, bottom, left = face_locations[0]
                     cv2.rectangle(frame, (left, top), (right, bottom), (0, 255, 0), 2)
                     cv2.putText(frame, user.full_name, (left, top - 10), 

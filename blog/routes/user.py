@@ -1,7 +1,7 @@
 import json
 from fastapi import APIRouter, Depends, Form, HTTPException, status, UploadFile, File
 from sqlalchemy.orm import Session
-from typing import List
+from typing import List, Optional
 
 from blog.schemas.user import User as UserSchema, UserBase, UserCreate, FaceRecognitionResponse
 from blog.models.user import User
@@ -55,22 +55,22 @@ def read_user(
 @router.put("/{user_id}", response_model=UserSchema)
 async def update_user(
     user_id: str,
-    username: str = Form(...),
-    email: str = Form(...),
-    full_name: str = Form(...),
+    username: Optional[str] = Form(None),
+    email: Optional[str] = Form(None),
+    full_name: Optional[str] = Form(None),
     file: UploadFile = File(None),
     db: Session = Depends(get_db),
     _: UserSchema = Depends(get_current_user),
 ):
-    user_base = UserBase(
-        username=username,
-        email=email,
-        full_name=full_name
-    )
-
     user_data = get_user_by_id(db, user_id)
     if user_data is None:
-        raise HTTPException(status_code=404, detail="User not found")
+        raise HTTPException(status_code=400, detail="User not found")
+
+    user_base = UserBase(
+        username=username if username is not None else user_data.username,
+        email=email if email is not None else user_data.email,
+        full_name=full_name if full_name is not None else user_data.full_name,
+    )
 
     face_embedding = None
     if file:
@@ -80,7 +80,9 @@ async def update_user(
             raise HTTPException(status_code=400, detail="Không tìm thấy khuôn mặt trong ảnh")
         face_embedding = FaceRecognitionService.encode_embedding(face_embedding)
 
-    db_user = user_service.update_user(db, user_id=user_id, user_data=user_base, face_embedding=face_embedding)
+    db_user = user_service.update_user(
+        db, user_id=user_id, user_data=user_base, face_embedding=face_embedding
+    )
     return db_user
 
 
