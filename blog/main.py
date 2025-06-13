@@ -3,7 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from blog.database.database import engine, Base
-from blog.routes import user, blog, auth, camera
+from blog.routes import user, blog, auth, camera, invoice
 
 # Create database tables
 Base.metadata.create_all(bind=engine)
@@ -34,6 +34,9 @@ app.include_router(auth.router)
 app.include_router(user.router)
 app.include_router(blog.router)
 app.include_router(camera.router)
+app.include_router(invoice.router)
+
+app.mount("/static", StaticFiles(directory="blog/static"), name="static")
 
 @app.get("/")
 def read_root():

@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>OCR Upload (Image)</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link href="https://fonts.googleapis.com/css?family=Roboto:400,700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Roboto', Arial, sans-serif;
+            background: #f0f2f5;
+            margin: 0;
+            padding: 0;
+        }
+        .container {
+            max-width: 500px;
+            margin: 40px auto;
+            background: #fff;
+            border-radius: 12px;
+            box-shadow: 0 4px 24px rgba(0,0,0,0.08);
+            padding: 32px 24px 24px 24px;
+            position: relative;
+        }
+        .logo {
+            position: absolute;
+            top: 18px;
+            right: 18px;
+            width: 60px;
+            height: auto;
+            z-index: 10;
+        }
+        h1 {
+            text-align: center;
+            color: #2d3a4b;
+            margin-bottom: 28px;
+            font-size: 2rem;
+        }
+        .upload-area {
+            border: 2px dashed #4f8cff;
+            background: #f7faff;
+            padding: 32px 16px;
+            text-align: center;
+            margin-bottom: 24px;
+            border-radius: 8px;
+            transition: border-color 0.2s;
+        }
+        .upload-area:hover {
+            border-color: #2d6cdf;
+        }
+        .custom-file-input {
+            display: none;
+        }
+        .custom-file-label {
+            display: inline-block;
+            background: linear-gradient(90deg, #4f8cff 0%, #2d6cdf 100%);
+            color: #fff;
+            border: none;
+            border-radius: 6px;
+            padding: 10px 28px;
+            font-size: 1rem;
+            font-weight: 700;
+            cursor: pointer;
+            margin-bottom: 8px;
+            box-shadow: 0 2px 8px rgba(79,140,255,0.08);
+            transition: background 0.2s, box-shadow 0.2s;
+        }
+        .custom-file-label:active {
+            background: #2d6cdf;
+        }
+        .file-name {
+            margin-bottom: 8px;
+            color: #2d3a4b;
+            font-size: 0.98rem;
+            font-style: italic;
+            min-height: 20px;
+        }
+        .img-preview {
+            display: block;
+            max-width: 100%;
+            max-height: 220px;
+            margin: 0 auto 16px auto;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(79,140,255,0.10);
+            border: 1px solid #b6d4ff;
+            background: #fff;
+        }
+        .lang-select {
+            margin-bottom: 16px;
+            padding: 8px 12px;
+            border-radius: 6px;
+            border: 1px solid #b6d4ff;
+            font-size: 1rem;
+        }
+        .upload-btn {
+            background: linear-gradient(90deg, #4f8cff 0%, #2d6cdf 100%);
+            color: #fff;
+            border: none;
+            border-radius: 6px;
+            padding: 10px 28px;
+            font-size: 1rem;
+            font-weight: 700;
+            cursor: pointer;
+            box-shadow: 0 2px 8px rgba(79,140,255,0.08);
+            transition: background 0.2s, box-shadow 0.2s;
+        }
+        .upload-btn:active {
+            background: #2d6cdf;
+        }
+        .result-box {
+            margin-top: 24px;
+            background: #eaf3ff;
+            padding: 18px;
+            border-radius: 8px;
+            min-height: 60px;
+            color: #222;
+            font-size: 1.05rem;
+            box-shadow: 0 2px 8px rgba(79,140,255,0.07);
+            border: 1px solid #b6d4ff;
+        }
+        .spinner {
+            display: none;
+            margin: 0 auto;
+            margin-top: 18px;
+            border: 5px solid #eaf3ff;
+            border-top: 5px solid #4f8cff;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        @media (max-width: 600px) {
+            .container { padding: 16px 4px; }
+            h1 { font-size: 1.3rem; }
+            .logo { width: 38px; top: 10px; right: 10px; }
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+    <img src="/static/Logo-Rikkei.png" alt="Logo" class="logo" />
+    <h1>Upload (Image) To Generate Text</h1>
+    <div class="upload-area" id="upload-area">
+        <label class="custom-file-label" for="file-input">Choose File</label>
+        <input type="file" id="file-input" class="custom-file-input" accept="image/png, image/jpeg, image/jpg" />
+        <div class="file-name" id="file-name"></div>
+        <img id="img-preview" class="img-preview" style="display:none;" alt="Preview" />
+        <select id="lang-select" class="lang-select">
+            <option value="en">English</option>
+            <option value="ja">Japanese</option>
+        </select>
+        <br>
+        <button class="upload-btn" onclick="uploadImage()">Upload Image</button>
+    </div>
+    <div class="spinner" id="spinner"></div>
+    <div id="result" class="result-box"></div>
+</div>
+<script>
+const fileInput = document.getElementById('file-input');
+const fileNameDiv = document.getElementById('file-name');
+const fileLabel = document.querySelector('.custom-file-label');
+const imgPreview = document.getElementById('img-preview');
+fileInput.addEventListener('change', function() {
+    if (this.files && this.files.length > 0) {
+        fileNameDiv.textContent = this.files[0].name;
+        // Hiển thị preview nếu là ảnh
+        const file = this.files[0];
+        if (file.type.startsWith('image/')) {
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                imgPreview.src = e.target.result;
+                imgPreview.style.display = 'block';
+            };
+            reader.readAsDataURL(file);
+        } else {
+            imgPreview.style.display = 'none';
+            imgPreview.src = '';
+        }
+    } else {
+        fileNameDiv.textContent = '';
+        imgPreview.style.display = 'none';
+        imgPreview.src = '';
+    }
+});
+async function uploadImage() {
+    const spinner = document.getElementById('spinner');
+    const resultBox = document.getElementById('result');
+    const langSelect = document.getElementById('lang-select');
+    if (!fileInput.files.length) { alert('Please select an image file.'); return; }
+    resultBox.textContent = '';
+    spinner.style.display = 'block';
+    const formData = new FormData();
+    formData.append('file', fileInput.files[0]);
+    formData.append('langs', langSelect.value);
+    try {
+        const res = await fetch('/invoice/upload-image', { method: 'POST', body: formData });
+        const data = await res.json();
+        displayResult(data);
+    } catch (e) {
+        resultBox.textContent = 'Có lỗi xảy ra khi xử lý ảnh.';
+    } finally {
+        spinner.style.display = 'none';
+    }
+}
+function displayResult(data) {
+    document.getElementById('result').textContent = data.text || 'No text found.';
+}
+</script>
+</body>
+</html> 
