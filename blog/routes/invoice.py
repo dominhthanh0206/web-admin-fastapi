@@ -1,7 +1,6 @@
 from fastapi import APIRouter, UploadFile, File, Request, Form
 import cv2
 import numpy as np
-import pytesseract
 import easyocr
 from fastapi.templating import Jinja2Templates
 import os
@@ -28,21 +27,10 @@ async def upload_image(file: UploadFile = File(...), langs: str = Form('en')):
         all_text = list(dict.fromkeys(text_vi + text_ja))
         text = '\n'.join(all_text)
     else:
-        # Chỉ chạy 1 lần với các ngôn ngữ được chọn
         reader = easyocr.Reader(lang_list)
         result = reader.readtext(img)
         text = '\n'.join([item[1] for item in result])
 
-    return {"text": text}
-
-@router.post("/upload")
-async def upload_invoice(file: UploadFile = File(...)):
-    from pdf2image import convert_from_bytes
-    pdf_bytes = await file.read()
-    images = convert_from_bytes(pdf_bytes)
-    text = ""
-    for img in images:
-        text += pytesseract.image_to_string(img, lang='eng') + "\n"
     return {"text": text}
 
 @router.get("/upload-page")
